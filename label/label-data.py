@@ -22,7 +22,7 @@ def label_sets(sensor_data, break_indices, rest_interval):
         end_idx = break_indices[i + 1]
         
         if end_idx - start_idx > 0:
-            sensor_data.loc[start_idx:end_idx, 'Label'] = int(set_counter)
+            sensor_data.loc[start_idx:end_idx, 'Label'] = set_counter
             set_counter += 1
 
     # Drop columns if they exist
@@ -57,18 +57,22 @@ def label_and_save_data(aggregated_data_base_dir, labeled_data_base_dir):
                     # For 0s rest intervals, split into 3 equal parts
                     total_length = len(acc_data)
                     part_length = total_length // 3
-                    acc_data['Label'] = None
-                    gyro_data['Label'] = None
-                    acc_data.loc[:part_length, 'Label'] = f'{rest_interval}s-1'
-                    acc_data.loc[part_length:2*part_length, 'Label'] = f'{rest_interval}s-2'
-                    acc_data.loc[2*part_length:, 'Label'] = f'{rest_interval}s-3'
-                    gyro_data.loc[:part_length, 'Label'] = f'{rest_interval}s-1'
-                    gyro_data.loc[part_length:2*part_length, 'Label'] = f'{rest_interval}s-2'
-                    gyro_data.loc[2*part_length:, 'Label'] = f'{rest_interval}s-3'
+                    acc_data['Label'] = np.nan
+                    gyro_data['Label'] = np.nan
+                    acc_data.loc[:part_length, 'Label'] = 1
+                    acc_data.loc[part_length:2*part_length, 'Label'] = 2
+                    acc_data.loc[2*part_length:, 'Label'] = 3
+                    gyro_data.loc[:part_length, 'Label'] = 1
+                    gyro_data.loc[part_length:2*part_length, 'Label'] = 2
+                    gyro_data.loc[2*part_length:, 'Label'] = 3
                 
                 # Drop rows that are not labeled
                 acc_data = acc_data.dropna(subset=['Label'])
                 gyro_data = gyro_data.dropna(subset=['Label'])
+                
+                # Convert Label column to integer type
+                acc_data['Label'] = acc_data['Label'].astype(int)
+                gyro_data['Label'] = gyro_data['Label'].astype(int)
                 
                 output_acc_file = labeled_data_base_dir / session_folder.name / 'Accelerometer-agg-labeled.csv'
                 output_gyro_file = labeled_data_base_dir / session_folder.name / 'Gyroscope-agg-labeled.csv'
@@ -83,10 +87,7 @@ def plot_labeled_data(sensor_data, output_file):
     sensor_data = sensor_data.dropna(subset=['Label'])
     
     # Define colors for each set
-    colors = {'0s-1': 'blue', '0s-2': 'green', '0s-3': 'red', 
-              '10s-1': 'blue', '10s-2': 'green', '10s-3': 'red', 
-              '30s-1': 'blue', '30s-2': 'green', '30s-3': 'red', 
-              '60s-1': 'blue', '60s-2': 'green', '60s-3': 'red'}
+    colors = {1: 'blue', 2: 'green', 3: 'red'}
     
     plt.figure(figsize=(12, 8))
     unique_labels = sensor_data['Label'].unique()
