@@ -22,7 +22,7 @@ def label_sets(sensor_data, break_indices, rest_interval):
         end_idx = break_indices[i + 1]
         
         if end_idx - start_idx > 0:
-            sensor_data.loc[start_idx:end_idx, 'Label'] = f'{rest_interval}s-{set_counter}'
+            sensor_data.loc[start_idx:end_idx, 'Label'] = int(set_counter)
             set_counter += 1
 
     # Drop columns if they exist
@@ -121,13 +121,12 @@ labeled_data_base_dir = Path('labeled-data')
 # Ensure labeled data directory exists
 labeled_data_base_dir.mkdir(exist_ok=True, parents=True)
 
-# Process and save data
 label_and_save_data(aggregated_data_base_dir, labeled_data_base_dir)
 
 # Plot labeled data for verification
-for session_folder in labeled_data_base_dir.iterdir():
-    if session_folder.is_dir():
-        for labeled_file in session_folder.iterdir():
-            if labeled_file.name.endswith('-labeled.csv'):
-                sensor_data = pd.read_csv(labeled_file)
-                plot_labeled_data(sensor_data, labeled_file)
+# for session_folder in labeled_data_base_dir.iterdir():
+#     if session_folder.is_dir():
+#         for labeled_file in session_folder.iterdir():
+#             if labeled_file.name.endswith('-labeled.csv'):
+#                 sensor_data = pd.read_csv(labeled_file)
+#                 plot_labeled_data(sensor_data, labeled_file)
