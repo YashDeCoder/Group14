@@ -5,6 +5,7 @@ import copy
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 class CreateDataset:
 
@@ -79,6 +80,20 @@ class CreateDataset:
             relevant_dataset_cols.extend([col for col in cols if id in col])
         return relevant_dataset_cols
 
+    def plot_data(self, output_file):
+        plt.figure(figsize=(12, 8))
+        for col in self.data_table.columns:
+            if col != 'Timestamps':
+                plt.plot(self.data_table['Timestamps'], self.data_table[col], label=col)
+        plt.title(f'Sensor Data: {output_file.stem}')
+        plt.xlabel('Timestamps')
+        plt.ylabel('Sensor Readings')
+        plt.legend()
+        plt.grid(True)
+        plot_file = output_file.parent / f'{output_file.stem}.png'
+        plt.savefig(plot_file)
+        plt.close()
+
 # Function to read the start time from time.csv
 def get_start_time(meta_dir):
     time_file = meta_dir / 'time.csv'
@@ -143,4 +158,7 @@ for session_folder in base_dir.iterdir():
                 dataset_creator.data_table.to_csv(output_file, index=False)
                 print(f"Aggregated data saved to {output_file}")
 
-# print(dataset_creator.data_table.head())
+                # Plot the aggregated data
+                dataset_creator.plot_data(output_file)
+
+print(dataset_creator.data_table.head())

@@ -15,19 +15,19 @@ def calculate_summary_statistics(df):
             summary[f'Max {col}'] = df[col].max()
     return summary
 
-def process_aggregated_data(input_dir, output_dir):
+def process_labeled_data(input_dir, output_dir):
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     
     for session_folder in input_path.iterdir():
         if session_folder.is_dir():
-            # Create corresponding directory in the data-summary folder
+            # Create corresponding directory in the summary-data folder
             summary_session_folder = output_path / session_folder.name
             summary_session_folder.mkdir(parents=True, exist_ok=True)
 
             for sensor_file in session_folder.iterdir():
-                if sensor_file.name.endswith('-agg.csv'):
-                    # Read the aggregated data
+                if sensor_file.name.endswith('-labeled.csv'):
+                    # Read the labeled data
                     df = pd.read_csv(sensor_file)
 
                     # Calculate summary statistics
@@ -48,7 +48,12 @@ def process_aggregated_data(input_dir, output_dir):
                     summary_df.to_csv(output_file, index=False)
                     print(f"Summary saved to {output_file}")
 
+# Base directories
+input_dir = 'labeled-data'
 output_dir = 'summary-data'
+
+# Ensure summary data directory exists
 os.makedirs(output_dir, exist_ok=True)
 
-process_aggregated_data('aggregated-data', output_dir)
+# Process labeled data and save summary statistics
+process_labeled_data(input_dir, output_dir)
