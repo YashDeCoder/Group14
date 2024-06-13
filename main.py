@@ -5,6 +5,26 @@ from pathlib import Path
 from scipy.special import erfc
 import re
 
+bmi_values = {
+    "F6": 0.5,
+    "M6": 0.5,
+    "F5": 0.5,
+    "M5": 0.5,
+    "F1": 0.5,
+    "M1": 0.5,
+    "M3": 25.3,
+    "M4": 0.5,
+    "F2": 0.5,
+    "M2": 0.5,
+    "F3": 0.5,
+    "F4": 0.5,
+    "M7": 22.1,
+    "M8": 0.5,
+    "M9": 23.7,
+    "M10": 0.5,
+    "M11": 21.6
+}
+
 def read_summary_data(directory):
     data = {}
     pattern = re.compile(r'[MF](\d+)-(\d+)')
@@ -69,6 +89,10 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
             female_male = match.group(0)[0]
             df_combined['Gender'] = female_male
 
+            # Adding BMI
+            bmi = match.group(0)[0] + match.group(1)
+            df_combined['BMI'] = bmi_values.get(bmi)
+
             combined_data[participant_session] = df_combined
         else:
             print(f"No gyroscope data for {participant_session}")
@@ -101,7 +125,7 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender']]
+        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
