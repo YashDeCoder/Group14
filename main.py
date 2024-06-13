@@ -92,11 +92,24 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
             # Adding BMI
             bmi = match.group(0)[0] + match.group(1)
             df_combined['BMI'] = bmi_values.get(bmi)
-
+            
             combined_data[participant_session] = df_combined
         else:
             print(f"No gyroscope data for {participant_session}")
     return combined_data
+
+# Function to add set durations to the data
+def add_set_durations(df):
+    df = df.copy() 
+    for label in [1, 2, 3]:
+        if label in df['Label'].values:
+            label_indices = df[df['Label'] == label].index
+            first_idx = label_indices[0]
+            last_idx = label_indices[-1]
+            duration = df.loc[last_idx, 'Timestamps'] - df.loc[first_idx, 'Timestamps']
+            df.loc[df['Label'] == label, 'Duration'] = duration
+    return df
+
 
 def chauvenet_criterion(N, axis_col, mean, stdv):
     criterion = 1.0 / (2 * N)  # Chauvenet's criterion
@@ -125,7 +138,7 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
+        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI', 'Duration']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
@@ -147,7 +160,9 @@ cleaned_data = {}
 for participant_session, df in combined_data.items():
     stats_df = summary_data.get(participant_session)
     if stats_df is not None:
-        cleaned_data[participant_session] = clean_data(df, stats_df)
+        cleaned_df = clean_data(df, stats_df)
+        cleaned_df = add_set_durations(cleaned_df)
+        cleaned_data[participant_session] = cleaned_df
     else:
         print(f"No summary data for {participant_session}")
 
