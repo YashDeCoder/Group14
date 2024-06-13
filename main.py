@@ -40,6 +40,7 @@ def read_labeled_data(directory, sensor_type):
 
 def combine_data_with_primary_gyro_label(acc_data, gyro_data):
     combined_data = {}
+    pattern = re.compile(r'[MF](\d+)-(\d+)')
     for participant_session in acc_data:
         if participant_session in gyro_data:
             df_acc = acc_data[participant_session]
@@ -62,6 +63,11 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
 
             # Int representation of the timestamp in Unix nanoseconds
             df_combined['Timestamps'] = df_combined['Timestamps'].astype(np.int64) // 10**6 * 10**6
+
+            # Adding gender column
+            match = pattern.match(participant_session)
+            female_male = match.group(0)[0]
+            df_combined['Gender'] = female_male
 
             combined_data[participant_session] = df_combined
         else:
@@ -95,7 +101,7 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label']]
+        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
