@@ -4,24 +4,25 @@ import os
 from pathlib import Path
 from scipy.special import erfc
 import re
+from ClassicalML import ClassicalML
 
 bmi_values = {
-    "F6": 0.5,
-    "M6": 0.5,
-    "F5": 0.5,
-    "M5": 0.5,
-    "F1": 0.5,
-    "M1": 0.5,
+    "F6": 24.7,
+    "M6": 20.8,
+    "F5": 17.9,
+    "M5": 23.5,
+    "F1": 20.8,
+    "M1": 23.1,
     "M3": 25.3,
-    "M4": 0.5,
-    "F2": 0.5,
-    "M2": 0.5,
-    "F3": 0.5,
-    "F4": 0.5,
+    "M4": 20.9,
+    "F2": 22.3,
+    "M2": 24.1,
+    "F3": 20.7,
+    "F4": 22.3,
     "M7": 22.1,
-    "M8": 0.5,
+    "M8": 23.0,
     "M9": 23.7,
-    "M10": 0.5,
+    "M10": 23.6,
     "M11": 21.6
 }
 
@@ -92,24 +93,11 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
             # Adding BMI
             bmi = match.group(0)[0] + match.group(1)
             df_combined['BMI'] = bmi_values.get(bmi)
-            
+
             combined_data[participant_session] = df_combined
         else:
             print(f"No gyroscope data for {participant_session}")
     return combined_data
-
-# Function to add set durations to the data
-def add_set_durations(df):
-    df = df.copy() 
-    for label in [1, 2, 3]:
-        if label in df['Label'].values:
-            label_indices = df[df['Label'] == label].index
-            first_idx = label_indices[0]
-            last_idx = label_indices[-1]
-            duration = df.loc[last_idx, 'Timestamps'] - df.loc[first_idx, 'Timestamps']
-            df.loc[df['Label'] == label, 'Duration'] = duration
-    return df
-
 
 def chauvenet_criterion(N, axis_col, mean, stdv):
     criterion = 1.0 / (2 * N)  # Chauvenet's criterion
@@ -131,6 +119,7 @@ def clean_data(df, stats_df):
     return df.dropna()
 
 def save_combined_cleaned_data(cleaned_data, output_dir):
+    arrayCleaned = []
     for participant_session, df in cleaned_data.items():
         output_session_dir = os.path.join(output_dir, participant_session)
         os.makedirs(output_session_dir, exist_ok=True)
@@ -138,11 +127,13 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI', 'Duration']]
+        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
-        # print(f"Cleaned combined data saved for {participant_session}")
+        arrayCleaned.append(df_cleaned)
+    return list(arrayCleaned)
+
 
 directory = 'labeled-data'
 output_dir = 'cleaned-data'
@@ -160,11 +151,14 @@ cleaned_data = {}
 for participant_session, df in combined_data.items():
     stats_df = summary_data.get(participant_session)
     if stats_df is not None:
-        cleaned_df = clean_data(df, stats_df)
-        cleaned_df = add_set_durations(cleaned_df)
-        cleaned_data[participant_session] = cleaned_df
+        cleaned_data[participant_session] = clean_data(df, stats_df)
     else:
         print(f"No summary data for {participant_session}")
 
 # Save cleaned data
-save_combined_cleaned_data(cleaned_data, output_dir)
+arrayCleanedData = save_combined_cleaned_data(cleaned_data, output_dir)
+
+# Start of Classical Training
+labels = ['Label']
+c_ml = ClassicalML
+df_train, df_test = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True)
