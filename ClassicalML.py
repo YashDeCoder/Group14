@@ -3,6 +3,12 @@ import numpy as np
 import random
 import copy
 import pandas as pd
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
+from sklearn.svm import SVR
+from sklearn.svm import LinearSVR
 
 # This class creates datasets that can be used by the learning algorithms. Up till now we have
 # assumed binary columns for each class, we will for instance introduce approaches to create
@@ -139,3 +145,47 @@ class ClassicalML:
                 test_set_X = self.update_set(test_set_X, test_set_X_person)
                 test_set_y = self.update_set(test_set_y, test_set_y_person)
         return training_set_X, test_set_X, training_set_y, test_set_y
+    
+    # Apply a random forest approach for classification upon the training data (with the specified value for
+    # the minimum samples in the leaf, the number of trees, and if we should print some of the details of the
+    # model print_model_details=True) and use the created model to predict the outcome for both the
+    # test and training set. It returns the categorical predictions for the training and test set as well as the
+    # probabilities associated with each class, each class being represented as a column in the data frame.
+    # Use CV of 3 to make things faster
+    # Use n_jobs = -1 which will make use of all of your processors. This could speed up also the calculation
+    def random_forest(self, train_X, train_y, test_X, n_estimators=10, min_samples_leaf=5, criterion='gini', print_model_details=False, gridsearch=True):
+
+        if gridsearch:
+            tuned_parameters = [{'min_samples_leaf': [2, 10, 50, 100, 200],
+                                 'n_estimators':[10, 50, 100],
+                                 'criterion':['gini', 'entropy']}]
+            rf = GridSearchCV(RandomForestClassifier(), tuned_parameters, cv=5, scoring='accuracy')
+        else:
+            rf = RandomForestClassifier(n_estimators=n_estimators, min_samples_leaf=min_samples_leaf, criterion=criterion)
+
+        # Fit the model
+
+        rf.fit(train_X, train_y.values.ravel())
+
+        if gridsearch and print_model_details:
+            print(rf.best_params_)
+
+        if gridsearch:
+            rf = rf.best_estimator_
+
+        pred_prob_training_y = rf.predict_proba(train_X)
+        pred_prob_test_y = rf.predict_proba(test_X)
+        pred_training_y = rf.predict(train_X)
+        pred_test_y = rf.predict(test_X)
+        frame_prob_training_y = pd.DataFrame(pred_prob_training_y, columns=rf.classes_)
+        frame_prob_test_y = pd.DataFrame(pred_prob_test_y, columns=rf.classes_)
+
+        if print_model_details:
+            ordered_indices = [i[0] for i in sorted(enumerate(rf.feature_importances_), key=lambda x:x[1], reverse=True)]
+            print('Feature importance random forest:')
+            for i in range(0, len(rf.feature_importances_)):
+                print(train_X.columns[ordered_indices[i]], end='')
+                print(' & ', end='')
+                print(rf.feature_importances_[ordered_indices[i]])
+
+        return pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y

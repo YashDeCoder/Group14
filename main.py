@@ -165,4 +165,5 @@ arrayCleanedData = save_combined_cleaned_data(cleaned_data, output_dir)
 labels = ['Label']
 c_ml = ClassicalML
 df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True, temporal=True)
-print(df_train_Y)
+
+pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.random_forest(c_ml, df_train_X, df_train_Y, df_test_X)
