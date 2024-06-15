@@ -161,4 +161,5 @@ arrayCleanedData = save_combined_cleaned_data(cleaned_data, output_dir)
 # Start of Classical Training
 labels = ['Label']
 c_ml = ClassicalML
-df_train, df_test = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True, temporal=True)
+df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True, temporal=True)
+print(df_train_Y)
