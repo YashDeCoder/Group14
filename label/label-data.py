@@ -16,7 +16,6 @@ def label_sets(sensor_data, break_indices, rest_interval):
     set_counter = 1
 
     timestamps = []
-    start_time = sensor_data['Timestamps'].iloc[0] #.astype(np.int64) // 10**6 * 10**6
 
     for i in range(len(break_indices) - 1):        
         if set_counter > 3:
@@ -28,14 +27,26 @@ def label_sets(sensor_data, break_indices, rest_interval):
             sensor_data.loc[start_idx:end_idx, 'Label'] = set_counter
             set_counter += 1
 
-            end_time = sensor_data['Timestamps'].iloc[end_idx - 1] #.astype(np.int64) // 10**6 * 10**6
-            timestamps.append(end_time)
+    for i in range(1, 4):
+        # Filter the DataFrame
+        labeled_data = sensor_data.loc[sensor_data['Label'] == i]
+        labeled_data['Timestamps'] = labeled_data.loc[:, 'Timestamps'].astype(np.int64) // 10**6 * 10**6
+
+        # Find the smallest and largest Timestamps for Label == 1.0
+        min_timestamp = labeled_data['Timestamps'].min()
+        max_timestamp = labeled_data['Timestamps'].max()
+        timestamps.append(max_timestamp - min_timestamp)
 
     # Drop columns if they exist
     for col in ['Variance', 'Rolling_Var']:
         if col in sensor_data.columns:
             sensor_data = sensor_data.drop(columns=[col])
     
+    if len(timestamps) == 3:
+        sensor_data['Delta Time'] = np.select([sensor_data['Label'] == 1.0, sensor_data['Label'] == 2.0],[timestamps[0], timestamps[1]],default=timestamps[2])
+    else:
+        # We are doing something wrong cause I am reaching this
+        sensor_data['Delta Time'] = timestamps[0]
     
     return sensor_data
 
@@ -72,6 +83,24 @@ def label_and_save_data(aggregated_data_base_dir, labeled_data_base_dir):
                     gyro_data.loc[:part_length, 'Label'] = 1
                     gyro_data.loc[part_length:2*part_length, 'Label'] = 2
                     gyro_data.loc[2*part_length:, 'Label'] = 3
+                    # Adding Delta Time
+                    timestamps = []
+                    for i in range(1, 4):
+                        # Filter the Gyro DataFrame
+                        labeled_gyro_data = gyro_data[gyro_data['Label'] == i]
+                        labeled_gyro_data['Timestamps'] = labeled_gyro_data['Timestamps'].astype(np.int64) // 10**6 * 10**6
+                        min_gyro_timestamp = labeled_gyro_data['Timestamps'].min()
+                        max_gyro_timestamp = labeled_gyro_data['Timestamps'].max()
+                        timestamps.append(max_gyro_timestamp - min_gyro_timestamp)
+                        # Filter the Acc DataFrame
+                        labeled_acc_data = acc_data[acc_data['Label'] == i]
+                        labeled_acc_data['Timestamps'] = labeled_acc_data['Timestamps'].astype(np.int64) // 10**6 * 10**6
+                        min_acc_timestamp = labeled_acc_data['Timestamps'].min()
+                        max_acc_timestamp = labeled_acc_data['Timestamps'].max()
+                        timestamps.append(max_acc_timestamp - min_acc_timestamp)
+                    acc_data['Delta Time'] = np.select([acc_data['Label'] == 1.0, acc_data['Label'] == 2.0],[timestamps[0], timestamps[1]],default=timestamps[2])
+                    gyro_data['Delta Time'] = np.select([gyro_data['Label'] == 1.0, gyro_data['Label'] == 2.0],[timestamps[0], timestamps[1]],default=timestamps[2])
+                    
                 
                 # Drop rows that are not labeled
                 acc_data = acc_data.dropna(subset=['Label'])
