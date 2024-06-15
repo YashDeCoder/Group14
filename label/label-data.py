@@ -14,21 +14,28 @@ def identify_breaks(sensor_data, relevant_columns, window_size=25, variance_thre
 def label_sets(sensor_data, break_indices, rest_interval):
     break_indices = [-1] + break_indices + [len(sensor_data)]
     set_counter = 1
-    
-    for i in range(len(break_indices) - 1):
+
+    timestamps = []
+    start_time = sensor_data['Timestamps'].iloc[0] #.astype(np.int64) // 10**6 * 10**6
+
+    for i in range(len(break_indices) - 1):        
         if set_counter > 3:
             break
         start_idx = break_indices[i] + 1
         end_idx = break_indices[i + 1]
-        
+
         if end_idx - start_idx > 0:
             sensor_data.loc[start_idx:end_idx, 'Label'] = set_counter
             set_counter += 1
+
+            end_time = sensor_data['Timestamps'].iloc[end_idx - 1] #.astype(np.int64) // 10**6 * 10**6
+            timestamps.append(end_time)
 
     # Drop columns if they exist
     for col in ['Variance', 'Rolling_Var']:
         if col in sensor_data.columns:
             sensor_data = sensor_data.drop(columns=[col])
+    
     
     return sensor_data
 
