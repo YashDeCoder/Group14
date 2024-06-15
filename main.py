@@ -87,7 +87,10 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
 
             # Adding gender column
             match = pattern.match(participant_session)
-            female_male = match.group(0)[0]
+            if match.group(0)[0] == 'M':
+                female_male = 0
+            else:
+                female_male = 1
             df_combined['Gender'] = female_male
 
             # Adding BMI
