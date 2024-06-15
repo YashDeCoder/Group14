@@ -82,9 +82,9 @@ class ClassicalML:
         else:
             # Check if the index is unique. If not, create a new index.
             if len(set(source_set.index) & set(addition.index)) > 0:
-                return source_set.append(addition).reset_index(drop=True)
+                return source_set.concat(addition).reset_index(drop=True)
             else:
-                return source_set.append(addition)
+                return source_set.concat(addition)
 
     # If we have multiple datasets representing different users and want to perform classification,
     # we do the same as we have seen for the single dataset
@@ -102,7 +102,7 @@ class ClassicalML:
         if unknown_users:
             # Shuffle the users we have.
             random.seed(random_state)
-            indices = range(0, len(datasets))
+            indices = list(range(0, len(datasets)))
             random.shuffle(indices)
             training_len = int(training_frac * len(datasets))
 
@@ -110,21 +110,21 @@ class ClassicalML:
             # the remaining users as test set.
             for i in range(0, training_len):
                 # We use the single dataset function for classification and add it to the training data
-                training_set_X_person, test_set_X_person, training_set_y_person, test_set_y_person = self.split_single_dataset_classification(datasets[indices[i]], class_labels, matching,
+                training_set_X_person, test_set_X_person, training_set_y_person, test_set_y_person = self.split_single_dataset_classification(self, datasets[indices[i]], class_labels, matching,
                                                                                                                                               1, filter=filter, temporal=temporal, random_state=random_state)
                 # We add a person column.
                 training_set_X_person[self.person_col] = indices[i]
-                training_set_X = self.update_set(training_set_X, training_set_X_person)
-                training_set_y = self.update_set(training_set_y, training_set_y_person)
+                training_set_X = self.update_set(self, training_set_X, training_set_X_person)
+                training_set_y = self.update_set(self, training_set_y, training_set_y_person)
 
             for j in range(training_len, len(datasets)):
                 # We use the single dataset function for classification and add it to the test data
-                training_set_X_person, test_set_X_person, training_set_y_person, test_set_y_person = self.split_single_dataset_classification(datasets[indices[j]], class_labels, matching,
+                training_set_X_person, test_set_X_person, training_set_y_person, test_set_y_person = self.split_single_dataset_classification(self, datasets[indices[j]], class_labels, matching,
                                                                                                                                               1, filter=filter, temporal=temporal, random_state=random_state)
                 # We add a person column.
                 training_set_X_person[self.person_col] = indices[j]
-                test_set_X = self.update_set(test_set_X, training_set_X_person)
-                test_set_y = self.update_set(test_set_y, training_set_y_person)
+                test_set_X = self.update_set(self, test_set_X, training_set_X_person)
+                test_set_y = self.update_set(self, test_set_y, training_set_y_person)
         else:
             init = True
             # Otherwise we split each dataset individually in a training and test set and add them.

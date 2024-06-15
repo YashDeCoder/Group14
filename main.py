@@ -127,7 +127,7 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Timestamps', 'Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
+        df_cleaned = df[['Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
@@ -161,4 +161,4 @@ arrayCleanedData = save_combined_cleaned_data(cleaned_data, output_dir)
 # Start of Classical Training
 labels = ['Label']
 c_ml = ClassicalML
-df_train, df_test = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True)
+df_train, df_test = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True, temporal=True)
