@@ -6,6 +6,9 @@ from scipy.special import erfc
 import re
 from ClassicalML import ClassicalML
 from ClassificationEvaluation import ClassificationEvaluation
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+from sklearn.calibration import calibration_curve
 
 bmi_values = {
     "F6": 24.7,
@@ -79,12 +82,14 @@ def combine_data_with_primary_gyro_label(acc_data, gyro_data):
             
             # Use Label_gyro as primary label (as we used gyro data for break detection as well)
             df_combined['Label'] = df_combined['Label_gyro']
+            df_combined['Set_Time'] = df_combined['Set_Time_acc']
 
             # Select only required columns
-            df_combined = df_combined[['Timestamps', 'Acc_X', 'Acc_Y', 'Acc_Z', 'Gyro_X', 'Gyro_Y', 'Gyro_Z', 'Label']]
+            df_combined = df_combined[['Timestamps', 'Acc_X', 'Acc_Y', 'Acc_Z', 'Gyro_X', 'Gyro_Y', 'Gyro_Z', 'Label', 'Set_Time']]
 
             # Int representation of the timestamp in Unix nanoseconds
             df_combined['Timestamps'] = df_combined['Timestamps'].astype(np.int64) // 10**6 * 10**6
+            df_combined['Set_Time'] = df_combined['Set_Time'].astype(np.int64) // 10**6 * 10**6
 
             # Adding gender column
             match = pattern.match(participant_session)
@@ -131,7 +136,7 @@ def save_combined_cleaned_data(cleaned_data, output_dir):
         combined_file = os.path.join(output_session_dir, 'combined-agg-cleaned.csv')
 
         # Select only the cleaned columns and primary label
-        df_cleaned = df[['Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI']]
+        df_cleaned = df[['Acc_X_cleaned', 'Acc_Y_cleaned', 'Acc_Z_cleaned', 'Gyro_X_cleaned', 'Gyro_Y_cleaned', 'Gyro_Z_cleaned', 'Label', 'Gender', 'BMI', 'Set_Time']]
         
         df_cleaned.to_csv(combined_file, index=False)
         
@@ -144,7 +149,6 @@ output_dir = 'cleaned-data'
 
 acc_data = read_labeled_data(directory, 'Accelerometer')
 gyro_data = read_labeled_data(directory, 'Gyroscope')
-
 combined_data = combine_data_with_primary_gyro_label(acc_data, gyro_data)
 
 summary_directory = 'summary-data'
@@ -165,12 +169,52 @@ arrayCleanedData = save_combined_cleaned_data(cleaned_data, output_dir)
 # Start of Classical Training
 labels = ['Label']
 c_ml = ClassicalML
-df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True, temporal=True)
+df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True)
 
-#pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.random_forest(c_ml, df_train_X, df_train_Y, df_test_X, print_model_details=True)
+pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.random_forest(c_ml, df_train_X, df_train_Y, df_test_X, print_model_details=True)
 
-# pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.support_vector_machine_with_kernel(c_ml, df_train_X, df_train_Y, df_test_X, print_model_details = True)
+# pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.naive_bayes(c_ml, df_train_X, df_train_Y, df_test_X)
 
-# cl_eval = ClassificationEvaluation
+evaluator = ClassificationEvaluation
 
-# print(f"Accuracy:{ cl_eval.accuracy(cl_eval, df_test_Y, pred_test_y)}")
+# Compute metrics BUT THIS DOESN'T WORK
+train_accuracy = evaluator.accuracy(evaluator, df_train_Y, pred_training_y)
+train_precision = evaluator.precision(evaluator, df_train_Y, pred_training_y)
+train_recall = evaluator.recall(evaluator, df_train_Y, pred_training_y)
+train_f1 = evaluator.f1(evaluator, df_train_Y, pred_training_y)
+train_auc = evaluator.auc(evaluator,df_train_Y, frame_prob_training_y)
+
+# Create a DataFrame to hold the results
+metrics_df = pd.DataFrame({
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'Training Set': [
+        train_accuracy, 
+        train_precision.mean(),  # Average precision across classes
+        train_recall.mean(),     # Average recall across classes
+        train_f1.mean(),         # Average F1 score across classes
+        train_auc
+    ],
+    'Test Set': [
+        test_accuracy, 
+        test_precision.mean(),  # Average precision across classes
+        test_recall.mean(),     # Average recall across classes
+        test_f1.mean(),         # Average F1 score across classes
+        test_auc
+    ]
+})
+
+# Display the results
+print(metrics_df)
+
+# Display detailed per-class metrics if needed
+detailed_metrics_df = pd.DataFrame({
+    'Class': [1, 2, 3],
+    'Training Precision': train_precision,
+    'Training Recall': train_recall,
+    'Training F1 Score': train_f1,
+    'Test Precision': test_precision,
+    'Test Recall': test_recall,
+    'Test F1 Score': test_f1
+})
+
+print(detailed_metrics_df)

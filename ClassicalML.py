@@ -4,7 +4,10 @@ import random
 import copy
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
+from sklearn.neural_network import MLPClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVR
@@ -77,7 +80,7 @@ class ClassicalML:
         # For non temporal data we use a standard function to randomly split the dataset.
         else:
             training_set_X, test_set_X, training_set_y, test_set_y = train_test_split(dataset.iloc[:,features],
-                                                                                      dataset.iloc[:,class_label_indices], test_size=(1-training_frac), stratify=dataset.iloc[:,class_label_indices], random_state=random_state)
+                                                                                      dataset.iloc[:,class_label_indices], stratify=dataset.iloc[:,class_label_indices], random_state=random_state)
         return training_set_X, test_set_X, training_set_y, test_set_y
 
     # If we have multiple overlapping indices (e.g. user 1 and user 2 have the same time stamps) our
@@ -190,72 +193,24 @@ class ClassicalML:
 
         return pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y
     
-    # Apply a support vector machine for classification upon the training data (with the specified value for
-    # C, epsilon and the kernel function), and use the created model to predict the outcome for both the
+    # Apply a naive bayes approach for classification upon the training data
+    # and use the created model to predict the outcome for both the
     # test and training set. It returns the categorical predictions for the training and test set as well as the
     # probabilities associated with each class, each class being represented as a column in the data frame.
-    # To improve the speed, one can use a CV of 3 only to make it faster
-    # Include n_jobs in the GridSearchCV function and set it to -1 to use all processors which could also increase the speed
-    def support_vector_machine_with_kernel(self, train_X, train_y, test_X, C=1,  kernel='rbf', gamma=1e-3, gridsearch=True, print_model_details=False):
+    def naive_bayes(self, train_X, train_y, test_X):
         # Create the model
-        if gridsearch:
-            tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
-                         'C': [1, 10, 100]}]
-            svm = GridSearchCV(SVC(probability=True), tuned_parameters, cv=5, scoring='accuracy')
-        else:
-            svm = SVC(C=C, kernel=kernel, gamma=gamma, probability=True, cache_size=7000)
-
+        nb = GaussianNB()
+        
+        train_y = train_y.values.ravel()
         # Fit the model
-        svm.fit(train_X, train_y.values.ravel())
-
-        if gridsearch and print_model_details:
-            print(svm.best_params_)
-
-        if gridsearch:
-            svm = svm.best_estimator_
+        nb.fit(train_X, train_y)
 
         # Apply the model
-        pred_prob_training_y = svm.predict_proba(train_X)
-        pred_prob_test_y = svm.predict_proba(test_X)
-        pred_training_y = svm.predict(train_X)
-        pred_test_y = svm.predict(test_X)
-        frame_prob_training_y = pd.DataFrame(pred_prob_training_y, columns=svm.classes_)
-        frame_prob_test_y = pd.DataFrame(pred_prob_test_y, columns=svm.classes_)
-
-        return pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y
-
-    # Apply a support vector machine for classification upon the training data (with the specified value for
-    # C, epsilon and the kernel function), and use the created model to predict the outcome for both the
-    # test and training set. It returns the categorical predictions for the training and test set as well as the
-    # probabilities associated with each class, each class being represented as a column in the data frame.
-    # To improve the speed, one can use a CV of 3 only to make it faster and use fewer iterations
-    def support_vector_machine_without_kernel(self, train_X, train_y, test_X, C=1, tol=1e-3, max_iter=1000, gridsearch=True, print_model_details=False):
-        # Create the model
-        if gridsearch:
-            tuned_parameters = [{'max_iter': [1000, 2000], 'tol': [1e-3, 1e-4],
-                         'C': [1, 10, 100]}]
-            svm = GridSearchCV(LinearSVC(), tuned_parameters, cv=5, scoring='accuracy')
-        else:
-            svm = LinearSVC(C=C, tol=tol, max_iter=max_iter)
-
-        # Fit the model
-        svm.fit(train_X, train_y.values.ravel())
-
-        if gridsearch and print_model_details:
-            print(svm.best_params_)
-
-        if gridsearch:
-            svm = svm.best_estimator_
-
-        # Apply the model
-
-        distance_training_platt = 1/(1+np.exp(svm.decision_function(train_X)))
-        pred_prob_training_y = distance_training_platt / distance_training_platt.sum(axis=1)[:,None]
-        distance_test_platt = 1/(1+np.exp(svm.decision_function(test_X)))
-        pred_prob_test_y = distance_test_platt / distance_test_platt.sum(axis=1)[:,None]
-        pred_training_y = svm.predict(train_X)
-        pred_test_y = svm.predict(test_X)
-        frame_prob_training_y = pd.DataFrame(pred_prob_training_y, columns=svm.classes_)
-        frame_prob_test_y = pd.DataFrame(pred_prob_test_y, columns=svm.classes_)
+        pred_prob_training_y = nb.predict_proba(train_X)
+        pred_prob_test_y = nb.predict_proba(test_X)
+        pred_training_y = nb.predict(train_X)
+        pred_test_y = nb.predict(test_X)
+        frame_prob_training_y = pd.DataFrame(pred_prob_training_y, columns=nb.classes_)
+        frame_prob_test_y = pd.DataFrame(pred_prob_test_y, columns=nb.classes_)
 
         return pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y
