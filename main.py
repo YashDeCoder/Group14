@@ -178,43 +178,31 @@ pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.ra
 evaluator = ClassificationEvaluation
 
 # Compute metrics BUT THIS DOESN'T WORK
-train_accuracy = evaluator.accuracy(evaluator, df_train_Y, pred_training_y)
-train_precision = evaluator.precision(evaluator, df_train_Y, pred_training_y)
-train_recall = evaluator.recall(evaluator, df_train_Y, pred_training_y)
-train_f1 = evaluator.f1(evaluator, df_train_Y, pred_training_y)
-train_auc = evaluator.auc(evaluator,df_train_Y, frame_prob_training_y)
+test_accuracy = evaluator.accuracy(evaluator, df_test_Y, pred_test_y)
+test_precision = evaluator.precision(evaluator, df_test_Y, pred_test_y)
+test_recall = evaluator.recall(evaluator, df_test_Y, pred_test_y)
+test_f1 = evaluator.f1(evaluator, df_test_Y, pred_test_y)
 
 # Create a DataFrame to hold the results
 metrics_df = pd.DataFrame({
-    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
-    'Training Set': [
-        train_accuracy, 
-        train_precision.mean(),  # Average precision across classes
-        train_recall.mean(),     # Average recall across classes
-        train_f1.mean(),         # Average F1 score across classes
-        train_auc
-    ],
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
     'Test Set': [
         test_accuracy, 
         test_precision.mean(),  # Average precision across classes
         test_recall.mean(),     # Average recall across classes
         test_f1.mean(),         # Average F1 score across classes
-        test_auc
     ]
 })
 
 # Display the results
-print(metrics_df)
+# print(metrics_df)
 
 # Display detailed per-class metrics if needed
 detailed_metrics_df = pd.DataFrame({
     'Class': [1, 2, 3],
-    'Training Precision': train_precision,
-    'Training Recall': train_recall,
-    'Training F1 Score': train_f1,
     'Test Precision': test_precision,
     'Test Recall': test_recall,
     'Test F1 Score': test_f1
 })
 
-print(detailed_metrics_df)
+# print(detailed_metrics_df)
