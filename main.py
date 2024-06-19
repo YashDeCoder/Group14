@@ -9,6 +9,16 @@ from ClassificationEvaluation import ClassificationEvaluation
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 from sklearn.calibration import calibration_curve
+from keras.models import Sequential
+from keras.layers import LSTM,Dense,Dropout,Flatten,Input
+import matplotlib.pyplot as plt
+from keras.layers import LSTM,Dense,Dropout,MaxPooling1D,TimeDistributed,Conv1D
+from keras.models import load_model
+from keras.models import Model
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import math
+from sklearn.metrics import mean_squared_error
 
 bmi_values = {
     "F6": 24.7,
@@ -171,38 +181,77 @@ labels = ['Label']
 c_ml = ClassicalML
 df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_classification(c_ml,arrayCleanedData, labels, '', 0.7, unknown_users=True)
 
-pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.random_forest(c_ml, df_train_X, df_train_Y, df_test_X, print_model_details=True)
+# pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.random_forest(c_ml, df_train_X, df_train_Y, df_test_X, print_model_details=True)
 
-# pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.naive_bayes(c_ml, df_train_X, df_train_Y, df_test_X)
+# # pred_training_y, pred_test_y, frame_prob_training_y, frame_prob_test_y = c_ml.naive_bayes(c_ml, df_train_X, df_train_Y, df_test_X)
 
-evaluator = ClassificationEvaluation
+# evaluator = ClassificationEvaluation
 
-# Compute metrics BUT THIS DOESN'T WORK
-test_accuracy = evaluator.accuracy(evaluator, df_test_Y, pred_test_y)
-test_precision = evaluator.precision(evaluator, df_test_Y, pred_test_y)
-test_recall = evaluator.recall(evaluator, df_test_Y, pred_test_y)
-test_f1 = evaluator.f1(evaluator, df_test_Y, pred_test_y)
+# # Compute metrics BUT THIS DOESN'T WORK
+# test_accuracy = evaluator.accuracy(evaluator, df_test_Y, pred_test_y)
+# test_precision = evaluator.precision(evaluator, df_test_Y, pred_test_y)
+# test_recall = evaluator.recall(evaluator, df_test_Y, pred_test_y)
+# test_f1 = evaluator.f1(evaluator, df_test_Y, pred_test_y)
 
-# Create a DataFrame to hold the results
-metrics_df = pd.DataFrame({
-    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
-    'Test Set': [
-        test_accuracy, 
-        test_precision.mean(),  # Average precision across classes
-        test_recall.mean(),     # Average recall across classes
-        test_f1.mean(),         # Average F1 score across classes
-    ]
-})
+# # Create a DataFrame to hold the results
+# metrics_df = pd.DataFrame({
+#     'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
+#     'Test Set': [
+#         test_accuracy, 
+#         test_precision.mean(),  # Average precision across classes
+#         test_recall.mean(),     # Average recall across classes
+#         test_f1.mean(),         # Average F1 score across classes
+#     ]
+# })
 
-# Display the results
-# print(metrics_df)
+# # Display the results
+# # print(metrics_df)
 
-# Display detailed per-class metrics if needed
-detailed_metrics_df = pd.DataFrame({
-    'Class': [1, 2, 3],
-    'Test Precision': test_precision,
-    'Test Recall': test_recall,
-    'Test F1 Score': test_f1
-})
+# # Display detailed per-class metrics if needed
+# detailed_metrics_df = pd.DataFrame({
+#     'Class': [1, 2, 3],
+#     'Test Precision': test_precision,
+#     'Test Recall': test_recall,
+#     'Test F1 Score': test_f1
+# })
 
 # print(detailed_metrics_df)
+
+# Using LSTM or TCN
+
+# Create the LSTM model
+model = Sequential()
+model.add(LSTM(units=50, return_sequences=True, input_shape=(df_train_X.shape[1], 1)))
+model.add(Dropout(0.2))
+model.add(LSTM(units=50, return_sequences=False))
+model.add(Dropout(0.2))
+model.add(Dense(units=1))
+
+# Compile the model
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the model
+model.fit(df_train_X, df_train_Y, epochs=50, batch_size=32, verbose=2)
+
+# Make predictions
+predictions = model.predict(df_test_X)
+
+# Evaluate the model
+mse = model.evaluate(df_test_X, df_test_Y)
+print(f'MSE: {mse}')
+
+# Plot the results
+# plt.plot(y_test, label='Actual')
+# plt.plot(predictions, label='Predicted')
+# plt.legend()
+# plt.show()
+
+# Plot the actual vs predicted values
+plt.figure(figsize=(10, 6))
+plt.plot(df_test_Y, label='Actual')
+plt.plot(predictions, label='Predicted')
+plt.xlabel('Time')
+plt.ylabel('Stock Price')
+plt.title('Actual vs Predicted Stock Prices')
+plt.legend()
+plt.show()
