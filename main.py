@@ -218,34 +218,34 @@ df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_clas
 # print(detailed_metrics_df)
 
 # Reshape the data for LSTM
-print(f'For train_X:{df_train_X.shape}')
-print(f'For test_X:{df_test_X.shape}')
-print(f'For train_Y:{df_train_Y.shape}')
-print(f'For test_Y:{df_test_Y.shape}')
-# Number of timesteps
-timesteps = 5
+# print(f'For train_X:{df_train_X.shape}')
+# print(f'For test_X:{df_test_X.shape}')
+# print(f'For train_Y:{df_train_Y.shape}')
+# print(f'For test_Y:{df_test_Y.shape}')
+# # Number of timesteps
+# timesteps = 5
 
-# Number of features per timestep
-features_per_timestep = df_train_X.shape[1] // timesteps
+# # Number of features per timestep
+# features_per_timestep = df_train_X.shape[1] // timesteps
 
-# Reshape the input data
-train_X = np.reshape(df_train_X, (df_train_X.shape[0], timesteps, features_per_timestep))
-test_X = np.reshape(df_test_X, (df_test_X.shape[0], timesteps, features_per_timestep))
+# # Reshape the input data
+# train_X = np.reshape(df_train_X, (df_train_X.shape[0], timesteps, features_per_timestep))
+# test_X = np.reshape(df_test_X, (df_test_X.shape[0], timesteps, features_per_timestep))
 
 # Define the LSTM model
-model = Sequential()
-model.add(LSTM(50, input_shape=(timesteps, features_per_timestep)))
-model.add(Dense(1, activation='sigmoid'))
+# model = Sequential()
+# model.add(LSTM(50, input_shape=(timesteps, features_per_timestep)))
+# model.add(Dense(1, activation='sigmoid'))
 
-# Compile the model
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# # Compile the model
+# model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-# Fit the model
-model.fit(train_X, df_train_Y, epochs=10, batch_size=64, validation_data=(test_X, df_test_Y))
+# # Fit the model
+# model.fit(train_X, df_train_Y, epochs=10, batch_size=64, validation_data=(test_X, df_test_Y))
 
-# Evaluate the model
-loss, accuracy = model.evaluate(test_X, df_test_Y)
-print(f'Test Accuracy: {accuracy}')
+# # Evaluate the model
+# loss, accuracy = model.evaluate(test_X, df_test_Y)
+# print(f'Test Accuracy: {accuracy}')
 
 
 # # Create the LSTM model
@@ -284,3 +284,31 @@ print(f'Test Accuracy: {accuracy}')
 # plt.title('Actual vs Predicted Stock Prices')
 # plt.legend()
 # plt.show()
+
+import numpy as np
+from keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense
+from tcn import TCN
+
+# Assuming df_train_X and df_test_X are DataFrames
+X_train = np.expand_dims(df_train_X.values, axis=-1)
+X_test = np.expand_dims(df_test_X.values, axis=-1)
+y_train = to_categorical(df_train_Y - 1, num_classes=3)
+y_test = to_categorical(df_test_Y - 1, num_classes=3)
+
+model = Sequential()
+model.add(TCN(nb_filters=64, kernel_size=3, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2])))
+model.add(Flatten())
+model.add(Dense(units=3, activation='softmax'))  # Adjust units for number of classes
+
+# Compile the model with an appropriate optimizer and loss function
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Optionally, use EarlyStopping to prevent overfitting
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+# Train the model
+model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
