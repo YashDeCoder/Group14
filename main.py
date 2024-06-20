@@ -19,6 +19,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import math
 from sklearn.metrics import mean_squared_error
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+from tcn import TCN
 
 bmi_values = {
     "F6": 24.7,
@@ -217,82 +221,88 @@ df_train_X, df_test_X, df_train_Y, df_test_Y = c_ml.split_multiple_datasets_clas
 
 # print(detailed_metrics_df)
 
-# Reshape the data for LSTM
-# print(f'For train_X:{df_train_X.shape}')
-# print(f'For test_X:{df_test_X.shape}')
-# print(f'For train_Y:{df_train_Y.shape}')
-# print(f'For test_Y:{df_test_Y.shape}')
-# # Number of timesteps
-# timesteps = 5
+def plotting_lstm(true_classes, predicted_classes, logs):
+    '''
+    We specifically plot: training loss, training acc, and predicted vs actual 
+    '''
+    # Plot the training loss and validation loss
+    plt.figure(figsize=(12, 6))
 
-# # Number of features per timestep
-# features_per_timestep = df_train_X.shape[1] // timesteps
+    plt.subplot(2, 1, 1)
+    plt.plot(logs['loss'], label='Training Loss')
+    plt.plot(logs['val_loss'], label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
 
-# # Reshape the input data
-# train_X = np.reshape(df_train_X, (df_train_X.shape[0], timesteps, features_per_timestep))
-# test_X = np.reshape(df_test_X, (df_test_X.shape[0], timesteps, features_per_timestep))
+    # Plot the additional metrics
+    plt.subplot(2, 1, 2)
+    plt.plot(logs['accuracy'], label='Training Accuracy')
+    plt.plot(logs['val_accuracy'], label='Validation Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
 
-# Define the LSTM model
-# model = Sequential()
-# model.add(LSTM(50, input_shape=(timesteps, features_per_timestep)))
-# model.add(Dense(1, activation='sigmoid'))
+    plt.tight_layout()
+    plt.show()
 
-# # Compile the model
-# model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    # Plot the actual vs. predicted values
+    plt.figure(figsize=(12, 6))
+    plt.scatter(range(len(true_classes)), true_classes, label='Actual', alpha=0.6)
+    plt.scatter(range(len(predicted_classes)), predicted_classes, label='Predicted', alpha=0.6)
+    plt.title('Actual vs. Predicted Values')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Class Label')
+    plt.legend()
+    plt.show()
 
-# # Fit the model
-# model.fit(train_X, df_train_Y, epochs=10, batch_size=64, validation_data=(test_X, df_test_Y))
+# Convert labels to one-hot encoded vectors
+num_classes = 3
+df_train_Y = to_categorical(df_train_Y - 1, num_classes=num_classes)  # Assuming labels are 1, 2, 3
+df_test_Y = to_categorical(df_test_Y - 1, num_classes=num_classes)
 
-# # Evaluate the model
-# loss, accuracy = model.evaluate(test_X, df_test_Y)
-# print(f'Test Accuracy: {accuracy}')
+# Reshape the input data to be 3D [samples, timesteps, features]
+df_train_X = np.reshape(df_train_X, (df_train_X.shape[0], df_train_X.shape[1], 1))
+df_test_X = np.reshape(df_test_X, (df_test_X.shape[0], df_test_X.shape[1], 1))
 
+## LSTM model
+model = Sequential()
+model.add(LSTM(units=50, return_sequences=True, input_shape=(df_train_X.shape[1], 1)))
+model.add(Dropout(0.2))
+model.add(LSTM(units=50, return_sequences=False))
+model.add(Dropout(0.2))
+model.add(Dense(units=num_classes, activation='softmax'))  # Output layer with softmax
 
-# # Create the LSTM model
-# model = Sequential()
-# model.add(LSTM(units=50, return_sequences=True, input_shape=(df_train_X.shape[1], 1)))
-# model.add(Dropout(0.2))
-# model.add(LSTM(units=50, return_sequences=False))
-# model.add(Dropout(0.2))
-# model.add(Dense(units=1))
+# Compile the model with additional metrics
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-# # Compile the model
-# model.compile(optimizer='adam', loss='mean_squared_error')
+# Train the model with validation split
+history = model.fit(df_train_X, df_train_Y, epochs=5, batch_size=32, verbose=2, validation_split=0.2)
+logs = pd.DataFrame(history.history)
 
-# # Train the model
-# model.fit(df_train_X, df_train_Y, epochs=50, batch_size=32, verbose=2)
+# Evaluate the model on the test set
+test_loss, test_accuracy = model.evaluate(df_test_X, df_test_Y, verbose=2)
+print(f'Test Loss: {test_loss}')
+print(f'Test Accuracy: {test_accuracy}')
 
-# # Make predictions
-# predictions = model.predict(df_test_X)
+# Make predictions
+predictions = model.predict(df_test_X)
 
-# # Evaluate the model
-# mse = model.evaluate(df_test_X, df_test_Y)
-# print(f'MSE: {mse}')
+# Convert predictions back to class labels
+predicted_classes = np.argmax(predictions, axis=1) + 1  # Adding 1 to match original labels
 
-# # Plot the results
-# # plt.plot(y_test, label='Actual')
-# # plt.plot(predictions, label='Predicted')
-# # plt.legend()
-# # plt.show()
+# Convert df_test_Y back to original labels for comparison
+true_classes = np.argmax(df_test_Y, axis=1) + 1
 
-# # Plot the actual vs predicted values
-# plt.figure(figsize=(10, 6))
-# plt.plot(df_test_Y, label='Actual')
-# plt.plot(predictions, label='Predicted')
-# plt.xlabel('Time')
-# plt.ylabel('Stock Price')
-# plt.title('Actual vs Predicted Stock Prices')
-# plt.legend()
-# plt.show()
+# Manual accuracy calculation
+manual_accuracy = np.mean(predicted_classes == true_classes)
+print(f'Manual Accuracy: {manual_accuracy}')
 
-import numpy as np
-from keras.utils import to_categorical
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Dense
-from tcn import TCN
+plotting_lstm(true_classes, predicted_classes, logs)
 
+## TCN Model
 # Assuming df_train_X and df_test_X are DataFrames
 X_train = np.expand_dims(df_train_X.values, axis=-1)
 X_test = np.expand_dims(df_test_X.values, axis=-1)
@@ -312,3 +322,4 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weig
 
 # Train the model
 model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
+
