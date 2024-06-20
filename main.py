@@ -222,20 +222,26 @@ print(f'For train_X:{df_train_X.shape}')
 print(f'For test_X:{df_test_X.shape}')
 print(f'For train_Y:{df_train_Y.shape}')
 print(f'For test_Y:{df_test_Y.shape}')
+# Number of timesteps
+timesteps = 5
+
+# Number of features per timestep
+features_per_timestep = df_train_X.shape[1] // timesteps
+
 # Reshape the input data
-train_X = np.reshape(df_train_X, (df_train_X.shape[0], 1, df_train_X.shape[1]))
-test_X = np.reshape(df_test_X, (df_test_X.shape[0], 1, df_test_X.shape[1]))
+train_X = np.reshape(df_train_X, (df_train_X.shape[0], timesteps, features_per_timestep))
+test_X = np.reshape(df_test_X, (df_test_X.shape[0], timesteps, features_per_timestep))
 
 # Define the LSTM model
 model = Sequential()
-model.add(LSTM(50, input_shape=(1, 10)))
+model.add(LSTM(50, input_shape=(timesteps, features_per_timestep)))
 model.add(Dense(1, activation='sigmoid'))
 
 # Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # Fit the model
-model.fit(train_X, df_train_Y, epochs=100, batch_size=64, validation_data=(test_X, df_test_Y))
+model.fit(train_X, df_train_Y, epochs=10, batch_size=64, validation_data=(test_X, df_test_Y))
 
 # Evaluate the model
 loss, accuracy = model.evaluate(test_X, df_test_Y)
